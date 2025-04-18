@@ -8,13 +8,14 @@ class CreateUser(serializers.Serializer):
     email = serializers.EmailField(max_length=255)
 
 
-class ReadUser(serializers.Serializer):
+class ReadUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['user_id', 'username', 'email']
+        fields = ['user_id', 'username', 'email', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = fields
 
 
-class UserSerializer(serializers.Serializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['user_id', 'username', 'email', 'is_active', 'created_at', 'updated_at']
