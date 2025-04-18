@@ -15,67 +15,59 @@ from user_app.models import User
 from user_app.api.v1.serializers import CreateUser
 
 
-async def get_all_users() -> Sequence[User]:
-    users = [user async for user in User.objects.order_by("user_id")]
-    return users
+def get_all_users() -> Sequence[User]:
+    return list(User.objects.order_by("user_id"))
 
 
-async def get_user_by_id(
+def get_user_by_id(
         user_id: int
 ) -> Optional[User]:
     try:
-        user = await User.objects.aget(user_id=user_id)
+        user = User.objects.get(user_id=user_id)
         return user
     except ObjectDoesNotExist:
         return None
 
 
-async def get_user_by_username(
+def get_user_by_username(
         username: str
 ) -> Optional[User]:
     try:
-        user = await User.objects.aget(username=username)
+        user = User.objects.get(username=username)
         return user
     except ObjectDoesNotExist:
         return None
 
 
-async def get_user_by_email(
+def get_user_by_email(
         email: str,
 ) -> Optional[User]:
     try:
-        result = await User.objects.aget(email=email)
+        result = User.objects.filter(email=email).first()
         return result
     except ObjectDoesNotExist:
         return None
 
 
-async def create_user(
-        user_create: CreateUser,
+def create_user(
+        *, username: str, email: str,
 ) -> User | Response:
     try:
-        user = await User.objects.acreate(**user_create.dict())
-        return user
-    except IntegrityError:
-        # Например, email уже существует
-        return Response(
-            {"detail": "Пользователь с таким email уже существует"},
-            status=status.HTTP_409_CONFLICT,
-        )
-    except ValidationError:
-        return Response(
-            {"detail": f"Ошибка валидации"},
-            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        )
+        return User.objects.create(username=username, email=email)
+    except IntegrityError as e:
+        # пробрасываем — пусть view сам вернёт нужный HTTP-код
+        raise
+    except ValidationError as e:
+        raise
 
 
-async def delete_user(
+def delete_user(
         user_id: int,
 ) -> Response | dict:
-    user = await get_user_by_id(user_id=user_id)
+    user = get_user_by_id(user_id=user_id)
     if user:
         try:
-            await user.adelete()
+            user.delete()
         except ObjectDoesNotExist:
             return Response(
                 {"detail": "Failed to delete user"},
