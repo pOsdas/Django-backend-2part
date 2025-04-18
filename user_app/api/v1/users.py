@@ -76,7 +76,7 @@ class GetUserAPIView(APIView):
     def get(self, request, user_id, *args, **kwargs):
         try:
             user = get_user_by_id(user_id=user_id)
-        except ObjectDoesNotExist:
+        except Exception as e:
             return Response(
                 {"detail": "User not found"},
                 status=status.HTTP_404_NOT_FOUND

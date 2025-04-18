@@ -26,7 +26,7 @@ def get_user_by_id(
         user = User.objects.get(user_id=user_id)
         return user
     except ObjectDoesNotExist:
-        return None
+        raise
 
 
 def get_user_by_username(
