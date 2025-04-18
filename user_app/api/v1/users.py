@@ -3,6 +3,7 @@ from rest_framework import status
 from django.db import IntegrityError
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django.core.exceptions import ObjectDoesNotExist
 
 from user_app.config import pydantic_settings as settings
@@ -10,15 +11,20 @@ from user_app.crud import (
     get_all_users, get_user_by_id, get_user_by_email,
     create_user, delete_user, get_user_by_username
 )
-from user_app.api.v1.serializers import CreateUser, ReadUser, UserSerializer, UserUpdateSerializer
+from user_app.api.v1.serializers import CreateUser, ReadUserSerializer, UserSerializer, UserUpdateSerializer
 
 
 # from .utils.fake_db import fake_users_db
 
 
 class CreateUserAPIView(APIView):
-    # permission_classes = [AllowAny]
-    async def post(self, request, *args, **kwargs):
+    """
+    Не создает записи в базе данных auth service через эту сторону.
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request, *args, **kwargs):
         serializer = CreateUser(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -28,19 +34,16 @@ class CreateUserAPIView(APIView):
 
         # Проверяем существует ли пользователь с таким email
         email = serializer.validated_data.get("email")
-        try:
-            exiting_user = await get_user_by_email(email=email)
-            if exiting_user:
-                return Response(
-                    {"detail": "User with such email already exists"},
-                    status=status.HTTP_409_CONFLICT,
-                )
-        except ObjectDoesNotExist:
-            existing_user = None
+
+        if get_user_by_email(email=email):
+            return Response(
+                {"detail": "User with such email already exists"},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         # Создаём пользователя
         try:
-            user = await create_user(**serializer.validated_data)
+            user = create_user(**serializer.validated_data)
         except IntegrityError as e:
             return Response(
                 {"detail": f"Integrity error: {str(e)}"},
@@ -52,21 +55,27 @@ class CreateUserAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        read_serializer = ReadUser(user=user)
+        read_serializer = ReadUserSerializer(user)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class GetUsersAPIView(APIView):
-    async def get(self, request, *args, **kwargs):
-        users = await get_all_users()
-        serializer = ReadUser(users, many=True)
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request, *args, **kwargs):
+        users = get_all_users()
+        serializer = ReadUserSerializer(instance=users, many=True)
         return Response(serializer.data)
 
 
 class GetUserAPIView(APIView):
-    async def get(self, user_id, *args, **kwargs):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request, user_id, *args, **kwargs):
         try:
-            user = await get_user_by_id(user_id=user_id)
+            user = get_user_by_id(user_id=user_id)
         except ObjectDoesNotExist:
             return Response(
                 {"detail": "User not found"},
@@ -77,9 +86,12 @@ class GetUserAPIView(APIView):
 
 
 class GetUserByUsernameAPIView(APIView):
-    async def get(self, username, *args, **kwargs):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request, username, *args, **kwargs):
         try:
-            user = await get_user_by_username(username=username)
+            user = get_user_by_username(username=username)
         except ObjectDoesNotExist:
             return Response(
                 {"detail": "User not found"},
@@ -91,7 +103,10 @@ class GetUserByUsernameAPIView(APIView):
 
 
 class UpdateUserAPIView(APIView):
-    async def patch(self, request, user_id, *args, **kwargs):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def patch(self, request, user_id, *args, **kwargs):
         serializer = UserUpdateSerializer(data=request.data, partial=True)
         if not serializer.is_valid():
             return Response(
@@ -100,7 +115,7 @@ class UpdateUserAPIView(APIView):
             )
 
         try:
-            user = await get_user_by_id(user_id=user_id)
+            user = get_user_by_id(user_id=user_id)
         except ObjectDoesNotExist:
             return Response(
                 {"detail": "User not found"},
@@ -126,7 +141,7 @@ class UpdateUserAPIView(APIView):
             )
 
         try:
-            await user.asave()
+            user.save()
         except Exception as e:
             return Response(
                 {"detail": f"Internal server error {str(e)}"},
@@ -137,12 +152,22 @@ class UpdateUserAPIView(APIView):
 
 
 class DeleteUserAPIView(APIView):
-    async def delete(self, request, user_id, *args, **kwargs):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def delete(self, request, *args, **kwargs):
+        user_id = kwargs.get("user_id")
+        if user_id is None:
+            return Response(
+                {"detail": "User ID is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
-            user = await get_user_by_id(user_id=user_id)
+            user = get_user_by_id(user_id=user_id)
             # Делаем запрос к auth_app
-            async with httpx.AsyncClient() as client:
-                response = await client.delete(f"{settings.auth_service_url}/api/v1/auth/{user.user_id}")
+            with httpx.Client() as client:
+                response = client.delete(f"{settings.auth_service_url}/api/v1/auth/{user_id}")
 
             # Пользователь не найден
             if response.status_code != 200:
@@ -153,7 +178,7 @@ class DeleteUserAPIView(APIView):
 
             # Пользователь найден
             try:
-                await delete_user(user_id=user.user_id)
+                delete_user(user_id=user_id)
             except Exception as e:
                 return Response(
                     {"detail": f"Internal server error: {str(e)}"},
