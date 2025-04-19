@@ -152,6 +152,9 @@ class UpdateUserAPIView(APIView):
 
 
 class DeleteUserAPIView(APIView):
+    """
+    С запросом к другой стороне.
+    """
     permission_classes = [AllowAny]
     authentication_classes = []
 
@@ -167,7 +170,7 @@ class DeleteUserAPIView(APIView):
             user = get_user_by_id(user_id=user_id)
             # Делаем запрос к auth_app
             with httpx.Client() as client:
-                response = client.delete(f"{settings.auth_service_url}/api/v1/auth/{user_id}")
+                response = client.delete(f"{settings.auth_service_url}/api/v1/auth/{user_id}/")
 
             # Пользователь не найден
             if response.status_code != 200:
@@ -195,3 +198,33 @@ class DeleteUserAPIView(APIView):
                 {"detail": "User not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class DeleteUserTestAPIView(APIView):
+    """
+    Без запроса к другой стороне.
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def delete(self, request, *args, **kwargs):
+        user_id = kwargs.get("user_id")
+        if user_id is None:
+            return Response(
+                {"detail": "User ID is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Пользователь найден
+        try:
+            delete_user(user_id=user_id)
+        except Exception as e:
+            return Response(
+                {"detail": f"Internal server error: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {"message": "User deleted successfully", "id": user_id},
+            status=status.HTTP_200_OK,
+        )

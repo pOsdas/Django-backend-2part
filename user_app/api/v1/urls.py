@@ -6,6 +6,7 @@ from .users import (
     GetUsersAPIView,
     UpdateUserAPIView,
     DeleteUserAPIView,
+    DeleteUserTestAPIView,
 )
 
 urlpatterns = [
@@ -15,4 +16,5 @@ urlpatterns = [
     path('username/<str:username>/', GetUserByUsernameAPIView.as_view(), name='get_user_by_username'),
     path('change_user/<int:user_id>/', UpdateUserAPIView.as_view(), name='update_user'),
     path('<int:user_id>/', DeleteUserAPIView.as_view(), name='delete_user_service_user'),
+    path('test/<int:user_id>/', DeleteUserTestAPIView.as_view(), name='delete_user_test_service_user'),
 ]
