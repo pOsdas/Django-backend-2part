@@ -65,6 +65,12 @@ class GetUsersAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         users = get_all_users()
+        if not users:
+            return Response(
+                {"detail": "Users not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         serializer = ReadUserSerializer(instance=users, many=True)
         return Response(serializer.data)
 
@@ -76,6 +82,7 @@ class GetUserAPIView(APIView):
     def get(self, request, user_id, *args, **kwargs):
         try:
             user = get_user_by_id(user_id=user_id)
+
         except ObjectDoesNotExist:
             return Response(
                 {"detail": "User not found"},
