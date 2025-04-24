@@ -4,6 +4,7 @@ from django.db import IntegrityError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema
 from django.core.exceptions import ObjectDoesNotExist
 
 from user_app.config import pydantic_settings as settings
@@ -16,7 +17,7 @@ from user_app.api.v1.serializers import CreateUser, ReadUserSerializer, UserSeri
 
 # from .utils.fake_db import fake_users_db
 
-
+@extend_schema(tags=["CRUD"])
 class CreateUserAPIView(APIView):
     """
     Не создает записи в базе данных auth service через эту сторону.
@@ -59,6 +60,7 @@ class CreateUserAPIView(APIView):
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["CRUD"])
 class GetUsersAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -75,6 +77,7 @@ class GetUsersAPIView(APIView):
         return Response(serializer.data)
 
 
+@extend_schema(tags=["CRUD"])
 class GetUserAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -92,6 +95,7 @@ class GetUserAPIView(APIView):
         return Response(serializer.data)
 
 
+@extend_schema(tags=["CRUD"])
 class GetUserByUsernameAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -109,6 +113,7 @@ class GetUserByUsernameAPIView(APIView):
         return Response(serializer.data)
 
 
+@extend_schema(tags=["CRUD"])
 class UpdateUserAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -158,6 +163,7 @@ class UpdateUserAPIView(APIView):
         return Response(serializer.data)
 
 
+@extend_schema(tags=["CRUD"])
 class DeleteUserAPIView(APIView):
     """
     С запросом к другой стороне.
@@ -207,6 +213,7 @@ class DeleteUserAPIView(APIView):
             )
 
 
+@extend_schema(tags=["Test"])
 class DeleteUserTestAPIView(APIView):
     """
     Без запроса к другой стороне.
