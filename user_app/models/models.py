@@ -8,6 +8,7 @@ class User(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now=True)
+    last_login = models.DateTimeField(auto_now=True)
 
     objects = models.Manager()
 
